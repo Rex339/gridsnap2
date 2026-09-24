@@ -2,6 +2,14 @@
   const gamesKey = 'voidverse-games';
   const reportsKey = 'voidverse-reports';
   const bansKey = 'voidverse-bans';
+  const discoverKey = 'voidverse-discover';
+
+  const seedDiscover = [
+    { name: 'Nova Drift', owner: 'Astra', players: '12.4K', genre: 'Racing', status: 'Featured' },
+    { name: 'Moonlit Market', owner: 'Luna', players: '8.1K', genre: 'Social', status: 'Trending' },
+    { name: 'Skyforge Arena', owner: 'Kairo', players: '6.7K', genre: 'Battle', status: 'Popular' },
+    { name: 'Crystal Realms', owner: 'Vex', players: '4.9K', genre: 'Adventure', status: 'Fresh' }
+  ];
 
   const read = (name, fallback = []) => {
     try {
@@ -64,6 +72,42 @@
     `).join('') : '<p class="page-subtitle">Safety queue is clear.</p>';
   };
 
+  const renderDiscover = () => {
+    const container = document.getElementById('discoverGrid');
+    if (!container) return;
+
+    const existing = read(gamesKey, []);
+    const discover = read(discoverKey, seedDiscover);
+    const merged = [
+      ...discover,
+      ...existing.map(game => ({
+        name: game.name,
+        owner: game.owner || 'Creator',
+        players: Math.floor(Math.random() * 7000 + 2500).toLocaleString(),
+        genre: 'Creator',
+        status: game.visibility === 'private' ? 'Private' : 'Public'
+      }))
+    ];
+
+    const unique = merged.filter((item, index, arr) => {
+      return arr.findIndex(x => x.name === item.name && x.owner === item.owner) === index;
+    });
+
+    if (!read(discoverKey, null).length) save(discoverKey, seedDiscover);
+
+    container.innerHTML = unique.slice(0, 6).map(item => `
+      <div class="discover-card">
+        <div class="discover-thumb"></div>
+        <div class="discover-meta">
+          <span class="discover-badge">${item.status}</span>
+          <h3>${item.name}</h3>
+          <p>${item.genre} • ${item.owner}</p>
+          <small>${item.players} players</small>
+        </div>
+      </div>
+    `).join('');
+  };
+
   const syncStats = () => {
     const games = read(gamesKey, []);
     const reports = read(reportsKey, []);
@@ -85,17 +129,31 @@
     }
 
     const games = read(gamesKey, []);
-    games.unshift({
+    const record = {
       name,
       owner,
       visibility,
       created: new Date().toLocaleDateString()
-    });
+    };
+
+    games.unshift(record);
     save(gamesKey, games);
+
+    const discover = read(discoverKey, seedDiscover);
+    discover.unshift({
+      name,
+      owner,
+      players: String(Math.floor(Math.random() * 7000 + 1200)),
+      genre: 'Creator',
+      status: visibility === 'private' ? 'Private' : 'Public'
+    });
+    save(discoverKey, discover);
+
     msg.textContent = 'Game published successfully.';
     msg.className = 'account-message';
     document.getElementById('gameName').value = '';
     renderGames();
+    renderDiscover();
     syncStats();
   };
 
@@ -109,7 +167,10 @@
     });
   });
 
+  if (!localStorage.getItem(discoverKey)) save(discoverKey, seedDiscover);
+
   renderGames();
   renderModeration();
+  renderDiscover();
   syncStats();
 })();
