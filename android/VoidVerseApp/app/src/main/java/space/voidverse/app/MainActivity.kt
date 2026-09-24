@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +48,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
 import space.voidverse.app.ui.theme.VoidVerseTheme
 
 class MainActivity : ComponentActivity() {
@@ -60,13 +68,111 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun VoidVerseApp() {
-    var selectedTab by remember { mutableStateOf("Discover") }
-    var showAuth by remember { mutableStateOf(true) }
+data class AuthResponse(
+    val token: String,
+    val user: User
+)
 
-    if (showAuth) {
-        AuthScreen(onContinue = { showAuth = false })
+data class User(
+    val id: String,
+    val username: String,
+    val email: String,
+    val tix: Int,
+    val vvTokens: Int,
+    val avatarColor: String,
+    val equippedItemId: String,
+    val equippedEmoteId: String
+)
+
+data class CatalogResponse(
+    val items: List<ItemData>,
+    val emotes: List<ItemData>
+)
+
+data class ItemData(
+    val id: String,
+    val name: String,
+    val kind: String,
+    val price: Int
+)
+
+interface VoidVerseApi {
+    @POST("/api/auth/register")
+    suspend fun register(@Body request: RegisterRequest): AuthResponse
+
+    @POST("/api/auth/login")
+    suspend fun login(@Body request: LoginRequest): AuthResponse
+
+    @GET("/api/player/catalog")
+    suspend fun catalog(): CatalogResponse
+}
+
+data class RegisterRequest(val username: String, val email: String, val password: String)
+data class LoginRequest(val identifier: String, val password: String)
+
+class VoidVerseViewModel : ViewModel() {
+    private val api = Retrofit.Builder()
+        .baseUrl("https://10.0.2.2:7181/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(VoidVerseApi::class.java)
+
+    var authedUser by mutableStateOf<User?>(null)
+    var authToken by mutableStateOf("")
+    var catalog by mutableStateOf(CatalogResponse(emptyList(), emptyList()))
+    var isLoading by mutableStateOf(false)
+    var error by mutableStateOf("")
+
+    suspend fun register(username: String, email: String, password: String) {
+        isLoading = true
+        error = ""
+        try {
+            val response = api.register(RegisterRequest(username, email, password))
+            authToken = response.token
+            authedUser = response.user
+            catalog = api.catalog()
+        } catch (e: Exception) {
+            error = e.message ?: "Registration failed"
+        } finally {
+            isLoading = false
+        }
+    }
+
+    suspend fun login(identifier: String, password: String) {
+        isLoading = true
+        error = ""
+        try {
+            val response = api.login(LoginRequest(identifier, password))
+            authToken = response.token
+            authedUser = response.user
+            catalog = api.catalog()
+        } catch (e: Exception) {
+            error = e.message ?: "Login failed"
+        } finally {
+            isLoading = false
+        }
+    }
+}
+
+@Composable
+fun VoidVerseApp(viewModel: VoidVerseViewModel = viewModel()) {
+    var selectedTab by remember { mutableStateOf("Discover") }
+
+    if (viewModel.authedUser == null) {
+        AuthScreen(
+            onRegister = { username, email, password ->
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    viewModel.register(username, email, password)
+                }
+            },
+            onLogin = { identifier, password ->
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    viewModel.login(identifier, password)
+                }
+            },
+            loading = viewModel.isLoading,
+            errorText = viewModel.error
+        )
         return
     }
 
@@ -93,14 +199,24 @@ fun VoidVerseApp() {
         when (selectedTab) {
             "Discover" -> DiscoverScreen(modifier = Modifier.padding(padding))
             "Avatar" -> AvatarScreen(modifier = Modifier.padding(padding))
-            "Shop" -> ShopScreen(modifier = Modifier.padding(padding))
-            else -> ProfileScreen(modifier = Modifier.padding(padding))
+            "Shop" -> ShopScreen(modifier = Modifier.padding(padding), catalog = viewModel.catalog)
+            else -> ProfileScreen(modifier = Modifier.padding(padding), user = viewModel.authedUser)
         }
     }
 }
 
 @Composable
-fun AuthScreen(onContinue: () -> Unit) {
+fun AuthScreen(
+    onRegister: (String, String, String) -> Unit,
+    onLogin: (String, String) -> Unit,
+    loading: Boolean,
+    errorText: String
+) {
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isRegister by remember { mutableStateOf(true) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,16 +235,53 @@ fun AuthScreen(onContinue: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Create account", style = MaterialTheme.typography.titleLarge)
-                Text("player_name", color = Color(0xFFB7BCD5))
-                Text("you@example.com", color = Color(0xFFB7BCD5))
-                Text("password", color = Color(0xFFB7BCD5))
+                Text(if (isRegister) "Create account" else "Sign in", style = MaterialTheme.typography.titleLarge)
+
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (isRegister) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (errorText.isNotBlank()) {
+                    Text(errorText, color = Color(0xFFFF8AA6))
+                }
+
                 Button(
-                    onClick = onContinue,
+                    onClick = {
+                        if (isRegister) onRegister(username, email, password)
+                        else onLogin(username, password)
+                    },
+                    enabled = !loading,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B6BFF)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Enter VoidVerse")
+                    Text(if (loading) "Loading..." else if (isRegister) "Create account" else "Sign in")
+                }
+
+                Button(
+                    onClick = { isRegister = !isRegister },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B2438)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isRegister) "Already have an account?" else "Need an account?")
                 }
             }
         }
@@ -223,7 +376,7 @@ fun AvatarScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ShopScreen(modifier: Modifier = Modifier) {
+fun ShopScreen(modifier: Modifier = Modifier, catalog: CatalogResponse) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -252,20 +405,14 @@ fun ShopScreen(modifier: Modifier = Modifier) {
             }
         }
         SectionHeader("Cosmic shop")
-        val catalog = listOf(
-            "Nebula Hood" to "8 VV",
-            "Orbit Aura" to "12 VV",
-            "Void Wings" to "18 VV",
-            "Pixel Crown" to "25 VV"
-        )
-        catalog.forEach { (label, price) ->
-            ShopItemRow(label, price)
+        catalog.items.forEach { item ->
+            ShopItemRow(item.name, "${item.price} VV")
         }
     }
 }
 
 @Composable
-fun ProfileScreen(modifier: Modifier = Modifier) {
+fun ProfileScreen(modifier: Modifier = Modifier, user: User?) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -282,7 +429,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("Profile", style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("nova_builder", color = Color(0xFFB7BCD5))
+                Text(user?.username ?: "player", color = Color(0xFFB7BCD5))
                 Text("Creator ranking: Asteroid", color = Color(0xFFB7BCD5))
             }
         }
