@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090a12" />
+  <title>VoidVerse — Play beyond the horizon</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <section class="auth-gate" id="authGate">
+    <div class="auth-copy">
+      <div class="brand-lockup"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></div>
+      <p class="eyebrow">THE NEXT PLAYGROUND</p>
+      <h1>Build worlds.<br /><em>Find yours.</em></h1>
+      <p class="hero-copy">A living universe of games, creators, and impossible ideas.</p>
+      <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+    </div>
+    <div class="auth-card glass-card">
+      <div class="auth-tabs"><button class="tab active" data-auth="signin">Sign in</button><button class="tab" data-auth="signup">Create account</button></div>
+      <div class="auth-form" data-form="signin">
+        <p class="eyebrow">WELCOME BACK</p><h2>Return to the Verse</h2>
+        <label>Username or email<input id="signinName" type="text" placeholder="e.g. astral_player" /></label>
+        <label>Password<input id="signinPassword" type="password" placeholder="••••••••" /></label>
+        <button class="primary full" id="signinButton">Enter VoidVerse <span>↗</span></button>
+        <p class="form-note" id="signinNote">Demo mode — no account required.</p>
+      </div>
+      <div class="auth-form hidden" data-form="signup">
+        <p class="eyebrow">START YOUR STORY</p><h2>Claim your constellation</h2>
+        <label>Choose a username<input id="signupName" type="text" placeholder="e.g. nova_builder" /></label>
+        <label>Email address<input id="signupEmail" type="email" placeholder="you@voidverse.space" /></label>
+        <label>Create password<input id="signupPassword" type="password" placeholder="••••••••" /></label>
+        <button class="primary full" id="signupButton">Create account <span>↗</span></button>
+        <p class="form-note" id="signupNote">Your new profile begins with 150 TIX.</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="app-shell hidden" id="appShell">
+    <header class="topbar">
+      <a class="brand-lockup" href="#top"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></a>
+      <nav class="desktop-nav"><a class="nav-link active" href="#discover">Discover</a><a class="nav-link" href="#customize">Avatar</a><a class="nav-link" href="#studio">Studio</a></nav>
+      <div class="top-actions"><div class="wallet-pill"><span class="tix-dot">T</span><strong id="topTix">150</strong><span class="vv-dot">✦</span><strong id="topVv">0</strong></div><button class="avatar-button" id="logoutButton">NV</button></div>
+    </header>
+
+    <section class="welcome" id="top"><div><p class="eyebrow">THURSDAY, SEPTEMBER 24</p><h1>Good evening, <span id="playerName">Nova</span>.</h1><p class="subtle">The Verse is waiting for your next move.</p></div><button class="icon-button" aria-label="Notifications">♢<i></i></button></section>
+
+    <section class="featured glass-card" id="discover">
+      <div class="featured-art"><div class="planet planet-one"></div><div class="planet planet-two"></div><div class="featured-star">✦</div><span class="floating-label label-one">NEW REALMS</span><span class="floating-label label-two">∞</span></div>
+      <div class="featured-content"><div class="tag-row"><span class="tag violet">FEATURED</span><span class="tag">12K PLAYING</span></div><h2>Neon Drift:<br /><em>Afterlight</em></h2><p>Race through an electric city that never sleeps. Team up, drift fast, leave a mark.</p><button class="primary" id="playButton">Play now <span>↗</span></button></div>
+    </section>
+
+    <section class="section-block"><div class="section-heading"><div><p class="eyebrow">CURATED FOR YOU</p><h2>Explore worlds</h2></div><button class="text-button">View all <span>→</span></button></div><div class="game-grid"><article class="game-card"><div class="game-art art-cosmic"><span>✦</span></div><h3>Cosmic Garden</h3><p>Relaxing · 4.8 ★</p></article><article class="game-card"><div class="game-art art-echo"><span>◈</span></div><h3>Echoes of Nowhere</h3><p>Adventure · 4.9 ★</p></article><article class="game-card"><div class="game-art art-rush"><span>↯</span></div><h3>Hyper Rush</h3><p>Racing · 4.7 ★</p></article></div></section>
+
+    <section class="economy-panel glass-card"><div class="section-heading"><div><p class="eyebrow">YOUR ECONOMY</p><h2>Vault</h2></div><span class="live-status"><i></i> LIVE</span></div><div class="wallet-grid"><div class="balance-card tix-card"><span class="currency-icon">T</span><div><span class="currency-label">TIX</span><strong id="tixBalance">150</strong><small>Earned currency</small></div></div><div class="balance-card vv-card"><span class="currency-icon">✦</span><div><span class="currency-label">VV TOKENS</span><strong id="vvBalance">0</strong><small>Premium currency</small></div></div></div><div class="exchange-card"><div><span class="eyebrow">TRANSACTION CARD</span><h3>Convert TIX to VV</h3><p>Burn exactly <b>50 TIX</b> to receive <b>10 VV Tokens</b>.</p></div><button class="secondary" id="exchangeButton">Exchange <span>↗</span></button></div><p class="toast" id="economyToast"></p></section>
+
+    <section class="customizer-section" id="customize"><div class="section-heading"><div><p class="eyebrow">IDENTITY LAB</p><h2>Make it yours</h2></div><span class="section-count">01 / 03</span></div><div class="customizer-layout glass-card"><div class="avatar-stage"><div class="stage-grid"></div><div class="character"><div class="char-halo"></div><div class="char-head"><span class="char-eye left"></span><span class="char-eye right"></span></div><div class="char-body"></div><div class="char-leg left"></div><div class="char-leg right"></div></div><span class="stage-caption">LIVE PREVIEW</span></div><div class="custom-controls"><div class="control-group"><div class="control-title"><span>Color mesh</span><span class="selected-color" id="selectedColorName">Violet</span></div><div class="color-nodes"><button class="color-node selected" data-color="violet" aria-label="Violet"></button><button class="color-node cyan" data-color="cyan" aria-label="Cyan"></button><button class="color-node lime" data-color="lime" aria-label="Lime"></button><button class="color-node coral" data-color="coral" aria-label="Coral"></button><button class="color-node ice" data-color="ice" aria-label="Ice"></button></div></div><div class="control-group"><div class="control-title"><span>Featured items</span><span class="muted">VV ONLY</span></div><button class="item-row" data-cost="20" data-item="Prism visor"><span class="item-icon visor">◒</span><span><b>Prism visor</b><small>+12% aura</small></span><strong>20 ✦</strong></button><button class="item-row" data-cost="35" data-item="Orbit jacket"><span class="item-icon jacket">◇</span><span><b>Orbit jacket</b><small>Rare texture</small></span><strong>35 ✦</strong></button></div></div></div><p class="toast" id="customToast"></p></section>
+
+    <section class="studio-section" id="studio"><div class="section-heading"><div><p class="eyebrow">CREATOR MODE</p><h2>Studio baseplate</h2></div><span class="tag violet">BETA</span></div><div class="studio-card glass-card"><div class="studio-visual"><div class="baseplate"><i></i><i></i><i></i><i></i><span>+</span></div></div><div class="studio-content"><h3>Make something that lasts.</h3><p>Drop a baseplate, shape the rules, and invite the Verse in. Publishing your first instance earns a developer reward.</p><div class="reward"><span class="reward-icon">T</span><span><b>Developer reward</b><small>+100 TIX on publish</small></span></div><button class="primary full" id="publishButton">Publish Instance <span>↗</span></button><p class="toast" id="studioToast"></p></div></div></section>
+    <footer><span>✦ VOIDVERSE</span><span>Made for the curious.</span><span>v0.9.4</span></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
