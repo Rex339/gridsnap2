@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoidVerse Creator Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="account.css" />
+</head>
+<body>
+  <main class="account-page">
+    <header class="account-header">
+      <a class="brand-lockup" href="index.html"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></a>
+      <a class="back-link" href="index.html">← Back to home</a>
+    </header>
+
+    <div class="account-layout creator-layout">
+      <aside class="account-sidebar">
+        <p class="eyebrow">CREATOR HUB</p>
+        <button class="account-tab active" data-pane="overview">Overview</button>
+        <button class="account-tab" data-pane="publish">Create game</button>
+        <button class="account-tab" data-pane="games">My games</button>
+        <div class="sidebar-links">
+          <a href="account-settings.html">Account settings</a>
+          <a href="terms.html">Terms of Service</a>
+          <a href="privacy.html">Privacy Policy</a>
+        </div>
+      </aside>
+
+      <section class="account-content glass-card">
+        <div class="account-pane" data-pane-view="overview">
+          <p class="eyebrow">OVERVIEW</p>
+          <h1>Build your next universe</h1>
+          <p class="page-subtitle">Create experiences, publish worlds, and manage what the community can play.</p>
+
+          <div class="reward-balance creator-summary">
+            <div>
+              <small>GAMES</small>
+              <strong id="gameCount">0</strong>
+            </div>
+            <div>
+              <small>PLAYERS</small>
+              <strong id="playerCount">12K</strong>
+            </div>
+            <div>
+              <small>ACTIVE</small>
+              <strong id="activeCount">18</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-pane hidden" data-pane-view="publish">
+          <p class="eyebrow">CREATE GAME</p>
+          <h1>Publish a new world</h1>
+          <p class="page-subtitle">Create a new experience for the VoidVerse platform.</p>
+
+          <label>Game name
+            <input id="gameName" maxlength="40" placeholder="Nova Drift" />
+          </label>
+          <label>Owner
+            <input id="gameOwner" maxlength="24" placeholder="CreatorName" />
+          </label>
+          <label>Visibility
+            <select id="gameVisibility">
+              <option value="public">Public</option>
+              <option value="friends">Friends</option>
+              <option value="private">Private</option>
+            </select>
+          </label>
+          <button class="primary" id="createGame">Create game</button>
+          <p id="gameMessage" class="account-message"></p>
+        </div>
+
+        <div class="account-pane hidden" data-pane-view="games">
+          <p class="eyebrow">MY GAMES</p>
+          <h1>Published experiences</h1>
+          <p class="page-subtitle">Your game library updates as you publish new worlds.</p>
+          <div id="gamesList" class="games-list"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="creator.js"></script>
+</body>
+</html>
