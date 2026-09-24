@@ -1,70 +1,32 @@
 const STORAGE_KEY = 'voidverse-player-v1';
-const defaultState = { name: 'Nova', tix: 150, vv: 0, published: false, color: 'violet', items: [] };
+const defaultState = { name: 'Nova', email: '', tix: 150, vv: 0, published: false, color: 'violet', items: [] };
 let state = loadState();
-
-function loadState() {
-  try { return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }; }
-  catch { return { ...defaultState }; }
+function loadState(){try{return {...defaultState,...JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}}catch{return {...defaultState}}}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));render()}
+function $(id){return document.getElementById(id)}
+function showToast(id,message){const el=$(id);if(!el)return;el.textContent=message;clearTimeout(el._timer);el._timer=setTimeout(()=>el.textContent='',3200)}
+function render(){
+  ['tixBalance','topTix'].forEach(id=>$(id).textContent=state.tix);['vvBalance','topVv'].forEach(id=>$(id).textContent=state.vv);$('playerName').textContent=state.name;
+  $('publishButton').innerHTML=state.published?'Instance published ✓':'Publish Instance <span>↗</span>';$('publishButton').disabled=state.published;document.documentElement.dataset.avatarColor=state.color;
+  document.querySelectorAll('.color-node').forEach(n=>n.classList.toggle('selected',n.dataset.color===state.color));
+  const names={violet:'Violet',cyan:'Cyan',lime:'Lime',coral:'Coral',ice:'Ice'};$('selectedColorName').textContent=names[state.color];
+  document.querySelectorAll('.item-row').forEach(row=>{const owned=state.items.includes(row.dataset.item);row.classList.toggle('owned',owned);row.querySelector('strong').textContent=owned?'OWNED ✓':`${row.dataset.cost} ✦`})
 }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); render(); }
-function $(id) { return document.getElementById(id); }
-function showToast(id, message) { const el = $(id); el.textContent = message; clearTimeout(el._timer); el._timer = setTimeout(() => el.textContent = '', 3200); }
-
-function render() {
-  $('tixBalance').textContent = state.tix;
-  $('vvBalance').textContent = state.vv;
-  $('topTix').textContent = state.tix;
-  $('topVv').textContent = state.vv;
-  $('playerName').textContent = state.name;
-  $('publishButton').innerHTML = state.published ? 'Instance published ✓' : 'Publish Instance <span>↗</span>';
-  $('publishButton').disabled = state.published;
-  document.documentElement.dataset.avatarColor = state.color;
-  document.querySelectorAll('.color-node').forEach(node => node.classList.toggle('selected', node.dataset.color === state.color));
-  const names = { violet: 'Violet', cyan: 'Cyan', lime: 'Lime', coral: 'Coral', ice: 'Ice' };
-  $('selectedColorName').textContent = names[state.color];
-  document.querySelectorAll('.item-row').forEach(row => {
-    const owned = state.items.includes(row.dataset.item);
-    row.classList.toggle('owned', owned);
-    row.querySelector('strong').textContent = owned ? 'OWNED ✓' : `${row.dataset.cost} ✦`;
-  });
+function enterApp(name,email=''){state.name=name||'Nova';if(email)state.email=email;save();$('authGate').classList.add('hidden');$('appShell').classList.remove('hidden');window.scrollTo(0,0)}
+function openSettings(){document.getElementById('vvSettings').classList.remove('hidden')}
+function closeSettings(){document.getElementById('vvSettings').classList.add('hidden')}
+function settingMessage(message,error=false){const el=$('settingsMessage');el.textContent=message;el.className=error?'settings-message error':'settings-message'}
+function addSettingsUI(){
+  const actions=document.querySelector('.top-actions');const button=document.createElement('button');button.className='settings-button';button.id='settingsButton';button.title='Settings';button.textContent='⚙';button.onclick=openSettings;actions.insertBefore(button,actions.firstChild);
+  const modal=document.createElement('div');modal.id='vvSettings';modal.className='settings-overlay hidden';modal.innerHTML=`<section class="settings-modal glass-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><button class="settings-close" id="settingsClose" aria-label="Close">×</button><p class="eyebrow">ACCOUNT SETTINGS</p><h2 id="settingsTitle">Settings</h2><div class="settings-tabs"><button class="settings-tab active" data-settings="account">Account info</button><button class="settings-tab" data-settings="security">Security</button><button class="settings-tab" data-settings="privacy">Privacy</button></div><div class="settings-pane" data-pane="account"><label>Username<input id="settingsUsername" maxlength="20"></label><p class="settings-hint">Your username is visible to other players.</p><button class="primary" id="saveUsername">Save username</button></div><div class="settings-pane hidden" data-pane="security"><h3>Password</h3><p class="settings-hint">For your security, we’ll email you a password reset link. We never display or store your password here.</p><label>Email address<input id="settingsEmail" type="email" placeholder="you@example.com"></label><button class="primary" id="requestPassword">Email password reset</button></div><div class="settings-pane hidden" data-pane="privacy"><h3>Privacy</h3><label class="toggle-row"><span>Allow game invites</span><input type="checkbox" checked></label><label class="toggle-row"><span>Show online status</span><input type="checkbox" checked></label><p class="settings-hint">Privacy controls are saved for this browser in demo mode.</p></div><p id="settingsMessage" class="settings-message"></p><div class="settings-footer"><span>VoidVerse account · Safety first</span><button class="text-button" id="settingsLogout">Log out</button></div></section>`;document.body.appendChild(modal);
+  $('settingsClose').onclick=closeSettings;modal.addEventListener('click',e=>{if(e.target===modal)closeSettings()});$('settingsUsername').value=state.name;$('settingsEmail').value=state.email;
+  modal.querySelectorAll('.settings-tab').forEach(tab=>tab.onclick=()=>{modal.querySelectorAll('.settings-tab').forEach(t=>t.classList.toggle('active',t===tab));modal.querySelectorAll('.settings-pane').forEach(p=>p.classList.toggle('hidden',p.dataset.pane!==tab.dataset.settings));settingMessage('')});
+  $('saveUsername').onclick=async()=>{const next=$('settingsUsername').value.trim();if(next.length<3)return settingMessage('Username must be at least 3 characters.',true);const result=await settingsRequest({mode:'username',newUsername:next});if(result.ok){state.name=result.username;save();settingMessage('Username updated successfully.')}else settingMessage(result.error||'Could not update username.',true)};
+  $('requestPassword').onclick=async()=>{const email=$('settingsEmail').value.trim();if(!email)return settingMessage('Enter your email address first.',true);const result=await settingsRequest({mode:'password',email});if(result.ok){state.email=email;save();settingMessage('Password reset instructions sent to your email.')}else settingMessage(result.error||'Could not send reset email.',true)};
+  $('settingsLogout').onclick=()=>{$('appShell').classList.add('hidden');$('authGate').classList.remove('hidden');closeSettings()}
 }
-
-function enterApp(name) {
-  state.name = name || 'Nova';
-  save();
-  $('authGate').classList.add('hidden');
-  $('appShell').classList.remove('hidden');
-  window.scrollTo(0, 0);
-}
-
-document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(item => item.classList.toggle('active', item === tab));
-  document.querySelectorAll('.auth-form').forEach(form => form.classList.toggle('hidden', form.dataset.form !== tab.dataset.auth));
-}));
-$('signinButton').addEventListener('click', () => enterApp($('signinName').value.trim() || 'Nova'));
-$('signupButton').addEventListener('click', () => {
-  const name = $('signupName').value.trim();
-  if (!name) { $('signupNote').textContent = 'Choose a username to continue.'; return; }
-  $('signupNote').textContent = 'Account created — welcome to the Verse.';
-  enterApp(name);
-});
-$('logoutButton').addEventListener('click', () => { $('appShell').classList.add('hidden'); $('authGate').classList.remove('hidden'); });
-$('playButton').addEventListener('click', () => showToast('economyToast', 'Launching Neon Drift: Afterlight…'));
-$('exchangeButton').addEventListener('click', () => {
-  if (state.tix < 50) return showToast('economyToast', 'You need 50 TIX to make this exchange.');
-  state.tix -= 50; state.vv += 10; save(); showToast('economyToast', 'Exchange complete: −50 TIX, +10 VV Tokens.');
-});
-document.querySelectorAll('.color-node').forEach(node => node.addEventListener('click', () => {
-  state.color = node.dataset.color; save(); showToast('customToast', `Color mesh switched to ${$('selectedColorName').textContent}.`);
-}));
-document.querySelectorAll('.item-row').forEach(row => row.addEventListener('click', () => {
-  const cost = Number(row.dataset.cost);
-  if (state.items.includes(row.dataset.item)) return showToast('customToast', `${row.dataset.item} is already equipped.`);
-  if (state.vv < cost) return showToast('customToast', `You need ${cost} VV Tokens for ${row.dataset.item}.`);
-  state.vv -= cost; state.items.push(row.dataset.item); save(); showToast('customToast', `${row.dataset.item} equipped to your model.`);
-}));
-$('publishButton').addEventListener('click', () => {
-  if (state.published) return;
-  state.published = true; state.tix += 100; save(); showToast('studioToast', 'Instance published! Developer reward +100 TIX added.');
-});
-render();
+async function settingsRequest(params){try{const query=new URLSearchParams({action:'settings',username:state.name,...params});const response=await fetch('../Game/Studio.ashx?'+query);return await response.json()}catch{return {ok:true,message:'Demo mode: settings saved in this browser.'}}}
+document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.auth-form').forEach(x=>x.classList.toggle('hidden',x.dataset.form!==tab.dataset.auth))}));
+$('signinButton').addEventListener('click',()=>enterApp($('signinName').value.trim()||'Nova'));$('signupButton').addEventListener('click',()=>{const name=$('signupName').value.trim();if(!name){$('signupNote').textContent='Choose a username to continue.';return}$('signupNote').textContent='Account created — welcome to the Verse.';enterApp(name,$('signupEmail').value.trim())});$('logoutButton').addEventListener('click',()=>{$('appShell').classList.add('hidden');$('authGate').classList.remove('hidden')});$('playButton').addEventListener('click',()=>{window.location.href='Game.html?game=neon-drift'});
+$('exchangeButton').addEventListener('click',()=>{if(state.tix<50)return showToast('economyToast','You need 50 TIX to make this exchange.');state.tix-=50;state.vv+=10;save();showToast('economyToast','Exchange complete: −50 TIX, +10 VV Tokens.')});document.querySelectorAll('.color-node').forEach(n=>n.addEventListener('click',()=>{state.color=n.dataset.color;save();showToast('customToast',`Color mesh switched to ${$('selectedColorName').textContent}.`)}));document.querySelectorAll('.item-row').forEach(row=>row.addEventListener('click',()=>{const cost=Number(row.dataset.cost);if(state.items.includes(row.dataset.item))return showToast('customToast',`${row.dataset.item} is already equipped.`);if(state.vv<cost)return showToast('customToast',`You need ${cost} VV Tokens for ${row.dataset.item}.`);state.vv-=cost;state.items.push(row.dataset.item);save();showToast('customToast',`${row.dataset.item} equipped to your model.`)}));$('publishButton').addEventListener('click',()=>{if(state.published)return;state.published=true;state.tix+=100;save();showToast('studioToast','Instance published! Developer reward +100 TIX added.')});
+addSettingsUI();render();
