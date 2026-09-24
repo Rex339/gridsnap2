@@ -1,0 +1,331 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Web;
+using Newtonsoft.Json;
+
+namespace RobloxWebSite.Game
+{
+    public class Account : IHttpHandler, IReadOnlySessionState
+    {
+        public void ProcessRequest(HttpContext context)
+        {
+            context.Response.ContentType = "application/json";
+            context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+
+            string action = (context.Request["action"] ?? "profile").Trim();
+            string username = (context.Request["username"] ?? "").Trim();
+            string email = (context.Request["email"] ?? "").Trim();
+            string password = context.Request["password"] ?? "";
+
+            switch (action)
+            {
+                case "signup":
+                    Write(context, HandleSignup(username, email, password));
+                    return;
+                case "signin":
+                    Write(context, HandleSignin(username, email, password, context));
+                    return;
+                case "profile":
+                    Write(context, HandleProfile(context));
+                    return;
+                case "saveSettings":
+                    Write(context, HandleSaveSettings(context, username, email, context.Request["newUsername"] ?? "", context.Request["mode"] ?? "profile"));
+                    return;
+                case "dailyReward":
+                    Write(context, HandleDailyReward(context));
+                    return;
+                case "convertMoon":
+                    Write(context, HandleConvertMoon(context));
+                    return;
+                case "logout":
+                    context.Session.Remove("voidverse_user");
+                    Write(context, new { ok = true, loggedOut = true });
+                    return;
+                default:
+                    Write(context, new { ok = false, error = "Unknown action." });
+                    return;
+            }
+        }
+
+        public bool IsReusable => false;
+
+        private static object HandleSignup(string username, string email, string password)
+        {
+            if (!IsValidUsername(username)) return new { ok = false, error = "Username must be 3-20 letters, numbers, or underscores." };
+            if (!IsValidEmail(email)) return new { ok = false, error = "A valid email is required." };
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 6) return new { ok = false, error = "Password must be at least 6 characters." };
+
+            List<UserRecord> users = LoadUsers();
+            foreach (UserRecord existing in users)
+            {
+                if (string.Equals(existing.Username, username, StringComparison.OrdinalIgnoreCase))
+                    return new { ok = false, error = "That username is already taken." };
+                if (string.Equals(existing.Email, email, StringComparison.OrdinalIgnoreCase))
+                    return new { ok = false, error = "That email is already in use." };
+            }
+
+            UserRecord record = new UserRecord
+            {
+                Username = username,
+                Email = email,
+                PasswordHash = Hash(password),
+                CreatedUtc = DateTime.UtcNow,
+                Tix = 150,
+                VvTokens = 0,
+                VoidMoon = 0,
+                VoidShards = 0,
+                PrivacyInvites = true,
+                PrivacyOnline = true,
+                LastDailyClaim = null
+            };
+
+            users.Add(record);
+            SaveUsers(users);
+            return new { ok = true, message = "Account created successfully.", username = record.Username };
+        }
+
+        private static object HandleSignin(string username, string email, string password, HttpContext context)
+        {
+            string identifier = username;
+            if (string.IsNullOrWhiteSpace(identifier) && !string.IsNullOrWhiteSpace(email)) identifier = email;
+            if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(password))
+                return new { ok = false, error = "Username/email and password are required." };
+
+            List<UserRecord> users = LoadUsers();
+            foreach (UserRecord user in users)
+            {
+                bool matchesUser = string.Equals(user.Username, identifier, StringComparison.OrdinalIgnoreCase) || string.Equals(user.Email, identifier, StringComparison.OrdinalIgnoreCase);
+                if (!matchesUser) continue;
+                if (!string.Equals(user.PasswordHash, Hash(password), StringComparison.OrdinalIgnoreCase))
+                    return new { ok = false, error = "Incorrect password." };
+
+                context.Session["voidverse_user"] = user.Username;
+                return new
+                {
+                    ok = true,
+                    username = user.Username,
+                    email = user.Email,
+                    tix = user.Tix,
+                    vv = user.VvTokens,
+                    voidMoon = user.VoidMoon,
+                    voidShards = user.VoidShards,
+                    message = "Signed in successfully."
+                };
+            }
+
+            return new { ok = false, error = "Account not found." };
+        }
+
+        private static object HandleProfile(HttpContext context)
+        {
+            string currentUser = context.Session["voidverse_user"] as string;
+            if (string.IsNullOrWhiteSpace(currentUser))
+                return new { ok = false, error = "Not signed in." };
+
+            UserRecord user = FindUser(currentUser);
+            if (user == null)
+                return new { ok = false, error = "User not found." };
+
+            return new
+            {
+                ok = true,
+                username = user.Username,
+                email = user.Email,
+                tix = user.Tix,
+                vv = user.VvTokens,
+                voidMoon = user.VoidMoon,
+                voidShards = user.VoidShards,
+                privacy = new { invites = user.PrivacyInvites, online = user.PrivacyOnline }
+            };
+        }
+
+        private static object HandleSaveSettings(HttpContext context, string username, string email, string newUsername, string mode)
+        {
+            string currentUser = context.Session["voidverse_user"] as string;
+            if (string.IsNullOrWhiteSpace(currentUser)) return new { ok = false, error = "Not signed in." };
+
+            List<UserRecord> users = LoadUsers();
+            UserRecord user = FindUser(users, currentUser);
+            if (user == null) return new { ok = false, error = "Account not found." };
+
+            if (string.Equals(mode, "username", StringComparison.OrdinalIgnoreCase))
+            {
+                string alt = (newUsername ?? "").Trim();
+                if (!IsValidUsername(alt)) return new { ok = false, error = "Username must be 3-20 letters, numbers, or underscores." };
+                foreach (UserRecord existing in users)
+                {
+                    if (existing != user && string.Equals(existing.Username, alt, StringComparison.OrdinalIgnoreCase))
+                        return new { ok = false, error = "That username is already taken." };
+                }
+                user.Username = alt;
+                context.Session["voidverse_user"] = alt;
+                SaveUsers(users);
+                return new { ok = true, username = alt, message = "Username updated." };
+            }
+
+            if (string.Equals(mode, "password", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!IsValidEmail(email)) return new { ok = false, error = "A valid email is required to change your password." };
+                user.Email = email;
+                SaveUsers(users);
+                return new { ok = true, email = email, message = "Password reset instructions were sent to your email." };
+            }
+
+            if (string.Equals(mode, "privacy", StringComparison.OrdinalIgnoreCase))
+            {
+                user.PrivacyInvites = string.Equals(context.Request["invites"], "true", StringComparison.OrdinalIgnoreCase);
+                user.PrivacyOnline = string.Equals(context.Request["online"], "true", StringComparison.OrdinalIgnoreCase);
+                SaveUsers(users);
+                return new { ok = true, privacy = new { invites = user.PrivacyInvites, online = user.PrivacyOnline } };
+            }
+
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                user.Username = username;
+                context.Session["voidverse_user"] = username;
+                SaveUsers(users);
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                user.Email = email;
+                SaveUsers(users);
+            }
+            return new { ok = true, message = "Settings saved." };
+        }
+
+        private static object HandleDailyReward(HttpContext context)
+        {
+            string currentUser = context.Session["voidverse_user"] as string;
+            if (string.IsNullOrWhiteSpace(currentUser)) return new { ok = false, error = "Not signed in." };
+
+            List<UserRecord> users = LoadUsers();
+            UserRecord user = FindUser(users, currentUser);
+            if (user == null) return new { ok = false, error = "Account not found." };
+
+            string today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            if (string.Equals(user.LastDailyClaim, today, StringComparison.OrdinalIgnoreCase))
+                return new { ok = false, error = "Daily reward already claimed today." };
+
+            user.VoidMoon += 10;
+            user.LastDailyClaim = today;
+            SaveUsers(users);
+            return new { ok = true, voidMoon = user.VoidMoon, message = "Daily reward claimed: +10 Void Moon." };
+        }
+
+        private static object HandleConvertMoon(HttpContext context)
+        {
+            string currentUser = context.Session["voidverse_user"] as string;
+            if (string.IsNullOrWhiteSpace(currentUser)) return new { ok = false, error = "Not signed in." };
+
+            List<UserRecord> users = LoadUsers();
+            UserRecord user = FindUser(users, currentUser);
+            if (user == null) return new { ok = false, error = "Account not found." };
+
+            if (user.VoidMoon < 2)
+                return new { ok = false, error = "You need 2 Void Moon to make 1 Void Shard." };
+
+            user.VoidMoon -= 2;
+            user.VoidShards += 1;
+            SaveUsers(users);
+            return new { ok = true, voidMoon = user.VoidMoon, voidShards = user.VoidShards, message = "Conversion complete: 2 Moon → 1 Shard." };
+        }
+
+        private static bool IsValidUsername(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            if (value.Length < 3 || value.Length > 20) return false;
+            foreach (char ch in value)
+            {
+                if (!char.IsLetterOrDigit(ch) && ch != '_') return false;
+            }
+            return true;
+        }
+
+        private static bool IsValidEmail(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            return value.Contains("@") && value.Contains(".");
+        }
+
+        private static void Write(HttpContext context, object payload)
+        {
+            context.Response.Write(JsonConvert.SerializeObject(payload));
+        }
+
+        private static string DataPath()
+        {
+            string path = HttpContext.Current.Server.MapPath("~/App_Data/VoidVerse");
+            Directory.CreateDirectory(path);
+            return Path.Combine(path, "users.json");
+        }
+
+        private static List<UserRecord> LoadUsers()
+        {
+            string path = DataPath();
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, "[]", Encoding.UTF8);
+                return new List<UserRecord>();
+            }
+
+            string json = File.ReadAllText(path, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(json)) return new List<UserRecord>();
+            List<UserRecord> users = JsonConvert.DeserializeObject<List<UserRecord>>(json) ?? new List<UserRecord>();
+            return users;
+        }
+
+        private static void SaveUsers(List<UserRecord> users)
+        {
+            string path = DataPath();
+            File.WriteAllText(path, JsonConvert.SerializeObject(users, Formatting.Indented), Encoding.UTF8);
+        }
+
+        private static UserRecord FindUser(string username)
+        {
+            List<UserRecord> users = LoadUsers();
+            return FindUser(users, username);
+        }
+
+        private static UserRecord FindUser(List<UserRecord> users, string username)
+        {
+            foreach (UserRecord user in users)
+            {
+                if (string.Equals(user.Username, username, StringComparison.OrdinalIgnoreCase))
+                    return user;
+            }
+            return null;
+        }
+
+        private static string Hash(string input)
+        {
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(input ?? string.Empty);
+                byte[] hash = sha.ComputeHash(bytes);
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in hash)
+                    sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
+        }
+
+        private sealed class UserRecord
+        {
+            public string Username { get; set; }
+            public string Email { get; set; }
+            public string PasswordHash { get; set; }
+            public DateTime CreatedUtc { get; set; }
+            public int Tix { get; set; }
+            public int VvTokens { get; set; }
+            public int VoidMoon { get; set; }
+            public int VoidShards { get; set; }
+            public string LastDailyClaim { get; set; }
+            public bool PrivacyInvites { get; set; }
+            public bool PrivacyOnline { get; set; }
+        }
+    }
+}
