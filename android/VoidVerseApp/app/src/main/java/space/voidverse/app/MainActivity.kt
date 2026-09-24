@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,15 +28,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ChipDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,7 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import space.voidverse.app.ui.theme.VoidVerseTheme
@@ -70,6 +63,12 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VoidVerseApp() {
     var selectedTab by remember { mutableStateOf("Discover") }
+    var showAuth by remember { mutableStateOf(true) }
+
+    if (showAuth) {
+        AuthScreen(onContinue = { showAuth = false })
+        return
+    }
 
     Scaffold(
         bottomBar = {
@@ -80,7 +79,6 @@ fun VoidVerseApp() {
                     "Shop" to Icons.Outlined.Store,
                     "Profile" to Icons.Outlined.AccountCircle
                 )
-
                 tabs.forEach { (label, icon) ->
                     NavigationBarItem(
                         selected = selectedTab == label,
@@ -102,6 +100,42 @@ fun VoidVerseApp() {
 }
 
 @Composable
+fun AuthScreen(onContinue: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF090B16))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("VOIDVERSE", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("Build worlds. Find yours.", color = Color(0xFFB7BCD5))
+        Spacer(modifier = Modifier.height(24.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF151B2D)),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Create account", style = MaterialTheme.typography.titleLarge)
+                Text("player_name", color = Color(0xFFB7BCD5))
+                Text("you@example.com", color = Color(0xFFB7BCD5))
+                Text("password", color = Color(0xFFB7BCD5))
+                Button(
+                    onClick = onContinue,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B6BFF)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enter VoidVerse")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun DiscoverScreen(modifier: Modifier = Modifier) {
     val scroll = rememberScrollState()
     Column(
@@ -113,17 +147,13 @@ fun DiscoverScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         TopBar()
-
         HeroCard()
-
         SectionHeader("Featured worlds")
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(listOf("Neon Drift", "Skyline Rush", "Crystal Garden")) { world ->
-                WorldCard(world)
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            WorldCard("Neon Drift")
+            WorldCard("Skyline Rush")
+            WorldCard("Crystal Garden")
         }
-
         SectionHeader("Daily quests")
         QuestCard("Customize your avatar", "+15 TIX")
         QuestCard("Open the portal", "+25 TIX")
@@ -141,22 +171,16 @@ fun AvatarScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         TopBar()
-
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF151B2D)),
             shape = RoundedCornerShape(24.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
                         .size(180.dp)
                         .background(
-                            brush = Brush.linearGradient(
-                                listOf(Color(0xFF8B6BFF), Color(0xFF5FD9C4))
-                            ),
+                            brush = Brush.linearGradient(listOf(Color(0xFF8B6BFF), Color(0xFF5FD9C4))),
                             shape = RoundedCornerShape(28.dp)
                         ),
                     contentAlignment = Alignment.Center
@@ -168,28 +192,27 @@ fun AvatarScreen(modifier: Modifier = Modifier) {
                             .background(Color.White.copy(alpha = 0.18f))
                     )
                 }
-
                 Spacer(modifier = Modifier.height(14.dp))
                 Text("Nova", style = MaterialTheme.typography.headlineSmall)
                 Text("Level 12 • Explorer", color = Color(0xFFB7BCD5))
-
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    listOf("Violet", "Cyan", "Pink", "Lime").forEach { colorName ->
-                        FilterChip(
-                            selected = false,
-                            onClick = {},
-                            label = { Text(colorName) },
-                            colors = ChipDefaults.filterChipColors(
-                                containerColor = Color(0xFF1A2136),
-                                labelColor = Color.White
+                    listOf("Violet", "Cyan", "Pink", "Lime").forEach { _ ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A2136)),
+                            shape = RoundedCornerShape(999.dp)
+                        ) {
+                            Text(
+                                text = "Color",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                color = Color.White,
+                                fontSize = 12.sp
                             )
-                        )
+                        }
                     }
                 }
             }
         }
-
         SectionHeader("Equipped gear")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             GearChip("Nebula Hood")
@@ -209,7 +232,6 @@ fun ShopScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         TopBar()
-
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF151B2D)),
             shape = RoundedCornerShape(24.dp),
@@ -229,7 +251,6 @@ fun ShopScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
-
         SectionHeader("Cosmic shop")
         val catalog = listOf(
             "Nebula Hood" to "8 VV",
@@ -237,7 +258,6 @@ fun ShopScreen(modifier: Modifier = Modifier) {
             "Void Wings" to "18 VV",
             "Pixel Crown" to "25 VV"
         )
-
         catalog.forEach { (label, price) ->
             ShopItemRow(label, price)
         }
@@ -254,7 +274,6 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         TopBar()
-
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF151B2D)),
             shape = RoundedCornerShape(24.dp),
@@ -267,7 +286,6 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                 Text("Creator ranking: Asteroid", color = Color(0xFFB7BCD5))
             }
         }
-
         SectionHeader("Badges")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BadgedPill("✦")
@@ -290,10 +308,7 @@ fun TopBar() {
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(Color(0xFF8B6BFF), Color(0xFF5FD9C4))).let { gradient ->
-                        Box
-default
-                    }),
+                    .background(Brush.linearGradient(listOf(Color(0xFF8B6BFF), Color(0xFF5FD9C4)))),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -306,7 +321,6 @@ default
             Spacer(modifier = Modifier.size(10.dp))
             Text("VOIDVERSE", fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
         }
-
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WalletPill("150")
             WalletPill("0 VV")
@@ -451,6 +465,6 @@ fun BadgedPill(icon: String) {
             .background(Color(0xFF1A2136)),
         contentAlignment = Alignment.Center
     ) {
-        Text(icon, fontSize = 22.sp, textAlign = TextAlign.Center)
+        Text(icon, fontSize = 22.sp)
     }
 }
