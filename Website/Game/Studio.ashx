@@ -1,1 +1,1 @@
-﻿<%@ WebHandler Language="C#" CodeBehind="Studio.ashx.cs" Class="RobloxWebSite.Game.Studio" %>
+<%@ WebHandler Language="C#" Class="RobloxWebSite.Game.Studio" %>

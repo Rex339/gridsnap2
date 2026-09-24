@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Web;
+using Newtonsoft.Json;
 
-namespace RobloxWebSite.Game {
-    /// <summary>
-    /// Summary description for Visit
-    /// </summary>
-    public class Visit : IHttpHandler {
-
-        public void ProcessRequest(HttpContext context) {
-            context.Response.ContentType = "text/plain";
-            context.Response.Write("Hello World");
+namespace RobloxWebSite.Game
+{
+    public sealed class Visit : IHttpHandler
+    {
+        public void ProcessRequest(HttpContext context)
+        {
+            context.Response.ContentType = "application/json";
+            var game = context.Request["game"] ?? "neon-drift";
+            context.Response.Write(JsonConvert.SerializeObject(new { ok = true, game, launchUrl = "/VoidVerse/Game.html?game=" + HttpUtility.UrlEncode(game), status = "ready" }));
         }
-
-        public bool IsReusable {
-            get {
-                return false;
-            }
-        }
+        public bool IsReusable => false;
     }
 }
