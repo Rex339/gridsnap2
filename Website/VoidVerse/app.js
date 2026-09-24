@@ -1,15 +1,460 @@
-const STORAGE_KEY = 'voidverse-player-v1';
-const defaultState = { name:'Nova', email:'', tix:150, vv:0, published:false, color:'violet', items:[] };
-let state = loadState();
-function loadState(){try{return {...defaultState,...JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}')}}catch{return {...defaultState}}}
-function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));render()}
-function $(id){return document.getElementById(id)}
-function toast(id,message){const el=$(id);if(!el)return;el.textContent=message;clearTimeout(el._timer);el._timer=setTimeout(()=>el.textContent='',3200)}
-function render(){['tixBalance','topTix'].forEach(id=>$(id).textContent=state.tix);['vvBalance','topVv'].forEach(id=>$(id).textContent=state.vv);$('playerName').textContent=state.name;$('publishButton').innerHTML=state.published?'Instance published ✓':'Publish Instance <span>↗</span>';$('publishButton').disabled=state.published;document.documentElement.dataset.avatarColor=state.color;document.querySelectorAll('.color-node').forEach(n=>n.classList.toggle('selected',n.dataset.color===state.color));const names={violet:'Violet',cyan:'Cyan',lime:'Lime',coral:'Coral',ice:'Ice'};$('selectedColorName').textContent=names[state.color];document.querySelectorAll('.item-row').forEach(row=>{const owned=state.items.includes(row.dataset.item);row.classList.toggle('owned',owned);row.querySelector('strong').textContent=owned?'OWNED ✓':`${row.dataset.cost} ✦`})}
-function enterApp(name,email=''){state.name=name||'Nova';if(email)state.email=email;save();$('authGate').classList.add('hidden');$('appShell').classList.remove('hidden');window.scrollTo(0,0)}
-document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.auth-form').forEach(x=>x.classList.toggle('hidden',x.dataset.form!==tab.dataset.auth))}));
-$('signinButton').onclick=()=>enterApp($('signinName').value.trim()||'Nova');$('signupButton').onclick=()=>{const name=$('signupName').value.trim();if(!name){$('signupNote').textContent='Choose a username to continue.';return}enterApp(name,$('signupEmail').value.trim())};$('logoutButton').onclick=()=>{$('appShell').classList.add('hidden');$('authGate').classList.remove('hidden')};$('playButton').onclick=()=>location.href='Game.html?game=neon-drift';
-$('exchangeButton').onclick=()=>{if(state.tix<50)return toast('economyToast','You need 50 TIX to make this exchange.');state.tix-=50;state.vv+=10;save();toast('economyToast','Exchange complete: −50 TIX, +10 VV Tokens.')};document.querySelectorAll('.color-node').forEach(n=>n.onclick=()=>{state.color=n.dataset.color;save();toast('customToast',`Color mesh switched to ${n.dataset.color}.`)});document.querySelectorAll('.item-row').forEach(row=>row.onclick=()=>{const cost=Number(row.dataset.cost);if(state.items.includes(row.dataset.item))return toast('customToast',`${row.dataset.item} is already equipped.`);if(state.vv<cost)return toast('customToast',`You need ${cost} VV Tokens for ${row.dataset.item}.`);state.vv-=cost;state.items.push(row.dataset.item);save();toast('customToast',`${row.dataset.item} equipped to your model.`)});$('publishButton').onclick=()=>{if(state.published)return;state.published=true;state.tix+=100;save();toast('studioToast','Instance published! Developer reward +100 TIX added.')};
-function openSettings(){ $('vvSettings').classList.remove('hidden') } function closeSettings(){ $('vvSettings').classList.add('hidden') }
-function addSettings(){const actions=document.querySelector('.top-actions');const gear=document.createElement('button');gear.className='settings-button';gear.id='settingsButton';gear.textContent='⚙';gear.onclick=openSettings;actions.insertBefore(gear,actions.firstChild);const modal=document.createElement('div');modal.id='vvSettings';modal.className='settings-overlay hidden';modal.innerHTML=`<section class="settings-modal glass-card"><button class="settings-close" id="settingsClose">×</button><p class="eyebrow">ACCOUNT SETTINGS</p><h2>Settings</h2><div class="settings-tabs"><button class="settings-tab active" data-settings="account">Account info</button><button class="settings-tab" data-settings="security">Security</button><button class="settings-tab" data-settings="privacy">Privacy</button></div><div class="settings-pane" data-pane="account"><label>Username<input id="settingsUsername" maxlength="20"></label><p class="settings-hint">Your username is visible to other players.</p><button class="primary" id="saveUsername">Save username</button></div><div class="settings-pane hidden" data-pane="security"><h3>Password</h3><p class="settings-hint">Enter your verified email to receive password reset instructions. VoidVerse never displays your password.</p><label>Email address<input id="settingsEmail" type="email" placeholder="you@example.com"></label><button class="primary" id="requestPassword">Email password reset</button></div><div class="settings-pane hidden" data-pane="privacy"><h3>Privacy & safety</h3><label class="toggle-row"><span>Allow game invites</span><input type="checkbox" checked></label><label class="toggle-row"><span>Show online status</span><input type="checkbox" checked></label><p class="settings-hint">Use block/report tools in an experience if someone breaks the rules.</p></div><p id="settingsMessage" class="settings-message"></p><div class="settings-footer"><span>VoidVerse account</span><button class="text-button" id="settingsLogout">Log out</button></div></section>`;document.body.appendChild(modal);$('settingsUsername').value=state.name;$('settingsEmail').value=state.email;$('settingsClose').onclick=closeSettings;modal.onclick=e=>{if(e.target===modal)closeSettings()};modal.querySelectorAll('.settings-tab').forEach(tab=>tab.onclick=()=>{modal.querySelectorAll('.settings-tab').forEach(x=>x.classList.toggle('active',x===tab));modal.querySelectorAll('.settings-pane').forEach(x=>x.classList.toggle('hidden',x.dataset.pane!==tab.dataset.settings))});$('saveUsername').onclick=()=>{const n=$('settingsUsername').value.trim();if(n.length<3)return $('settingsMessage').textContent='Username must be at least 3 characters.';state.name=n;save();$('settingsMessage').textContent='Username updated.'};$('requestPassword').onclick=()=>{const e=$('settingsEmail').value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return $('settingsMessage').textContent='Enter a valid email address.';state.email=e;save();$('settingsMessage').textContent='Password reset instructions sent to your email.'};$('settingsLogout').onclick=()=>{$('appShell').classList.add('hidden');$('authGate').classList.remove('hidden');closeSettings()}}
-addSettings();render();const mode=document.createElement('script');mode.src='roblox-mode.js';document.body.appendChild(mode);
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090a12" />
+  <title>VoidVerse — Play beyond the horizon</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <section class="auth-gate" id="authGate">
+    <div class="auth-copy">
+      <div class="brand-lockup"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></div>
+      <p class="eyebrow">THE NEXT PLAYGROUND</p>
+      <h1>Build worlds.<br /><em>Find yours.</em></h1>
+      <p class="hero-copy">A living universe of games, creators, and impossible ideas.</p>
+      <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+    </div>
+
+    <div class="auth-card glass-card">
+      <div class="auth-tabs">
+        <button class="tab active" data-auth="signin">Sign in</button>
+        <button class="tab" data-auth="signup">Create account</button>
+      </div>
+
+      <div class="auth-form" data-form="signin">
+        <p class="eyebrow">WELCOME BACK</p>
+        <h2>Return to the Verse</h2>
+        <label>Username or email<input id="signinName" type="text" placeholder="e.g. astral_player" /></label>
+        <label>Password<input id="signinPassword" type="password" placeholder="••••••••" /></label>
+        <button class="primary full" id="signinButton">Enter VoidVerse <span>↗</span></button>
+        <p class="form-note" id="signinNote">Demo mode — no account required.</p>
+      </div>
+
+      <div class="auth-form hidden" data-form="signup">
+        <p class="eyebrow">START YOUR STORY</p>
+        <h2>Claim your constellation</h2>
+        <label>Choose a username<input id="signupName" type="text" placeholder="e.g. nova_builder" /></label>
+        <label>Email address<input id="signupEmail" type="email" placeholder="you@voidverse.space" /></label>
+        <label>Create password<input id="signupPassword" type="password" placeholder="••••••••" /></label>
+        <button class="primary full" id="signupButton">Create account <span>↗</span></button>
+        <p class="form-note" id="signupNote">Your new profile begins with 150 TIX.</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="app-shell hidden" id="appShell">
+    <header class="topbar">
+      <a class="brand-lockup" href="#top"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></a>
+      <nav class="desktop-nav">
+        <a class="nav-link active" href="#discover">Discover</a>
+        <a class="nav-link" href="#customize">Avatar</a>
+        <a class="nav-link" href="#quests">Quests</a>
+        <a class="nav-link" href="#studio">Studio</a>
+      </nav>
+      <div class="top-actions">
+        <div class="wallet-pill">
+          <span class="tix-dot">T</span><strong id="topTix">150</strong>
+          <span class="vv-dot">✦</span><strong id="topVv">0</strong>
+        </div>
+        <button class="secondary tiny" id="logOutButton">Log out</button>
+      </div>
+    </header>
+
+    <section class="welcome" id="top">
+      <div>
+        <p class="eyebrow" id="dateLabel">THURSDAY, SEPTEMBER 24</p>
+        <h1>Good evening, <span id="playerName">Nova</span>.</h1>
+        <p class="subtle">The Verse is waiting for your next moment of wonder.</p>
+      </div>
+      <div class="welcome-actions">
+        <button class="primary" id="playPortalButton">Enter Portal</button>
+        <button class="ghost" id="photoModeButton">Photo mode</button>
+      </div>
+    </section>
+
+    <section class="featured glass-card" id="discover">
+      <div class="featured-art">
+        <div class="planet planet-one"></div>
+        <div class="planet planet-two"></div>
+        <div class="featured-star">✦</div>
+        <span class="floating-label label-one">NEW REALMS</span>
+        <span class="floating-label label-two">12K PLAYING</span>
+      </div>
+      <div class="featured-content">
+        <div class="tag-row">
+          <span class="tag violet">FEATURED</span>
+          <span class="tag">12K PLAYING</span>
+        </div>
+        <h2>Neon Drift:<br /><em>Afterlight</em></h2>
+        <p>Race through endless light trails, dodge gravity ripples, and outpace rival creators in the galaxy’s loudest arena.</p>
+        <button class="primary" type="button">Join world</button>
+      </div>
+    </section>
+
+    <section class="section-block worlds-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">CURATED FOR YOU</p>
+          <h2>Explore worlds</h2>
+        </div>
+        <button class="text-button" type="button">View all <span>→</span></button>
+      </div>
+
+      <div class="world-grid">
+        <article class="world-card glass-card">
+          <div class="world-thumb thumb-one"></div>
+          <div class="world-copy">
+            <h3>Galaxy Garden</h3>
+            <p>Grow impossible flowers and decorate floating islands.</p>
+          </div>
+        </article>
+        <article class="world-card glass-card">
+          <div class="world-thumb thumb-two"></div>
+          <div class="world-copy">
+            <h3>Skyline Rush</h3>
+            <p>Boost through neon rails and push your speedrun score.</p>
+          </div>
+        </article>
+        <article class="world-card glass-card">
+          <div class="world-thumb thumb-three"></div>
+          <div class="world-copy">
+            <h3>Stone Drift</h3>
+            <p>Build a floating home and meet up with friends at sunset.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="economy-panel glass-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">YOUR ECONOMY</p>
+          <h2>Vault</h2>
+        </div>
+        <span class="live-status"><i></i> LIVE</span>
+      </div>
+      <div class="economy-grid">
+        <div class="currency-box">
+          <span class="eyebrow">TIX</span>
+          <strong id="tixBalance">150</strong>
+          <small>Starter currency</small>
+        </div>
+        <div class="currency-box highlight">
+          <span class="eyebrow">VV Tokens</span>
+          <strong id="vvBalance">0</strong>
+          <small>Cosmic premium economy</small>
+        </div>
+        <div class="currency-box action-box">
+          <span class="eyebrow">EXCHANGE</span>
+          <button class="primary" id="exchangeButton">Trade 50 TIX → 10 VV</button>
+          <small id="economyToast"></small>
+        </div>
+      </div>
+    </section>
+
+    <section class="customizer-section glass-card" id="customize">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">IDENTITY LAB</p>
+          <h2>Make it yours</h2>
+        </div>
+        <span class="section-count">01 / 03</span>
+      </div>
+
+      <div class="customizer-grid">
+        <div class="avatar-stage">
+          <div class="avatar-shell">
+            <div class="avatar-shadow"></div>
+            <div id="avatarPreview" class="avatar-preview"> </div>
+          </div>
+          <div class="avatar-controls">
+            <button class="chip active" data-color="violet">Violet</button>
+            <button class="chip" data-color="cyan">Cyan</button>
+            <button class="chip" data-color="pink">Pink</button>
+            <button class="chip" data-color="lime">Lime</button>
+          </div>
+        </div>
+
+        <div class="catalog-panel">
+          <div class="catalog-header">
+            <h3>Items</h3>
+            <span class="tag violet" id="catalogNote">Starter kit</span>
+          </div>
+          <div id="itemCatalog" class="catalog-list"></div>
+          <h3 class="emote-title">Emotes</h3>
+          <div id="emoteCatalog" class="catalog-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="quest-panel glass-card" id="quests">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">STORYLINE</p>
+          <h2>Daily quests</h2>
+        </div>
+        <span class="tag violet">3 active</span>
+      </div>
+      <div id="questList" class="quest-list"></div>
+    </section>
+
+    <section class="badges-panel glass-card" id="badges">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">COLLECTION</p>
+          <h2>Badges</h2>
+        </div>
+      </div>
+      <div id="badgeList" class="badge-list"></div>
+    </section>
+
+    <section class="portal-panel glass-card" id="studio">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">MYSTERY PORTAL</p>
+          <h2>Portal of whispers</h2>
+        </div>
+        <span class="tag violet">Secret room</span>
+      </div>
+      <div class="portal-content">
+        <div class="portal-visual">
+          <div class="portal-core">✦</div>
+        </div>
+        <div class="portal-copy">
+          <p class="subtle">Explore the hidden portal to find rare rewards and world secrets.</p>
+          <button class="primary" id="portalSecretButton">Open the portal</button>
+          <p id="portalStatus" class="portal-status">Nothing here yet…</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>✦ VOIDVERSE</span>
+      <span>Made for the curious.</span>
+      <span>v0.9.6</span>
+    </footer>
+  </main>
+
+  <div id="tutorialOverlay" class="tutorial-overlay hidden">
+    <div class="tutorial-card glass-card">
+      <p class="eyebrow">STARTER GUIDE</p>
+      <h3>Welcome to your first run.</h3>
+      <ol>
+        <li>Customize your avatar.</li>
+        <li>Collect a free emote.</li>
+        <li>Complete 3 daily quests.</li>
+        <li>Open the mystery portal.</li>
+      </ol>
+      <button class="primary" id="closeTutorialButton">Start exploring</button>
+    </div>
+  </div>
+
+  <div id="photoOverlay" class="photo-overlay hidden">
+    <div class="photo-card glass-card">
+      <div class="photo-header">
+        <h3>Photo mode</h3>
+        <button class="ghost" id="closePhotoButton">Close</button>
+      </div>
+      <div class="photo-preview">
+        <div id="photoAvatar" class="avatar-preview large"> </div>
+      </div>
+      <p id="photoCaption">VoidVerse moment captured.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\n"},{
