@@ -20,6 +20,8 @@
         <button class="account-tab active" data-pane="overview">Overview</button>
         <button class="account-tab" data-pane="publish">Create game</button>
         <button class="account-tab" data-pane="games">My games</button>
+        <button class="account-tab" data-pane="mods">Moderation</button>
+        <button class="account-tab" data-pane="profile">Profile</button>
         <div class="sidebar-links">
           <a href="account-settings.html">Account settings</a>
           <a href="terms.html">Terms of Service</a>
@@ -46,6 +48,12 @@
               <small>ACTIVE</small>
               <strong id="activeCount">18</strong>
             </div>
+          </div>
+
+          <div class="queue-card">
+            <p class="eyebrow">LATEST SIGNAL</p>
+            <h3>Creator pulse</h3>
+            <p class="page-subtitle">Your newest game is gathering attention. Keep publishing, testing, and listening to player feedback.</p>
           </div>
         </div>
 
@@ -76,6 +84,40 @@
           <h1>Published experiences</h1>
           <p class="page-subtitle">Your game library updates as you publish new worlds.</p>
           <div id="gamesList" class="games-list"></div>
+        </div>
+
+        <div class="account-pane hidden" data-pane-view="mods">
+          <p class="eyebrow">MODERATION</p>
+          <h1>Safety queue</h1>
+          <p class="page-subtitle">Track submitted player reports and active bans.</p>
+          <div id="moderationList" class="games-list"></div>
+        </div>
+
+        <div class="account-pane hidden" data-pane-view="profile">
+          <p class="eyebrow">PROFILE</p>
+          <h1>Creator profile</h1>
+          <p class="page-subtitle">A simple identity panel for the creator hub.</p>
+
+          <div class="reward-balance creator-summary">
+            <div>
+              <small>LEVEL</small>
+              <strong id="creatorLevel">12</strong>
+            </div>
+            <div>
+              <small>FOLLOWERS</small>
+              <strong id="creatorFollowers">2.3K</strong>
+            </div>
+            <div>
+              <small>RATING</small>
+              <strong id="creatorRating">4.9</strong>
+            </div>
+          </div>
+
+          <div class="queue-card">
+            <p class="eyebrow">BIO</p>
+            <h3>Creator identity</h3>
+            <p class="page-subtitle">I build immersive spaces, social worlds, and playful systems for curious players.</p>
+          </div>
         </div>
       </section>
     </div>
