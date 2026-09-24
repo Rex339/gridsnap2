@@ -1,0 +1,12 @@
+(() => {
+  const KEY='voidverse-player-v1'; const defaults={name:'Nova',email:'',voidMoon:0,voidShards:0,lastDailyClaim:null,privacy:{invites:true,online:true}};
+  const read=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...defaults}}}; const save=p=>localStorage.setItem(KEY,JSON.stringify({...read(),...p})); const $=id=>document.getElementById(id); const day=()=>new Date().toISOString().slice(0,10); const message=(text,error=false)=>{ $('message').textContent=text; $('message').className='account-message'+(error?' error':''); };
+  let s=read(); $('username').value=s.name||'Nova'; $('email').value=s.email||''; $('invites').checked=s.privacy?.invites!==false; $('online').checked=s.privacy?.online!==false;
+  const render=()=>{s=read();$('moon').textContent=s.voidMoon||0;$('shards').textContent=s.voidShards||0;$('claim').disabled=s.lastDailyClaim===day();$('claim').textContent=s.lastDailyClaim===day()?'Claimed today':'Claim +10 Void Moon';};
+  document.querySelectorAll('.account-tab').forEach(tab=>tab.onclick=()=>{document.querySelectorAll('.account-tab').forEach(x=>x.classList.toggle('active',x===tab));document.querySelectorAll('.account-pane').forEach(x=>x.classList.toggle('hidden',x.dataset.paneView!==tab.dataset.pane));message('');});
+  $('saveUsername').onclick=()=>{const n=$('username').value.trim();if(!/^[a-zA-Z0-9_]{3,20}$/.test(n))return message('Use 3–20 letters, numbers, or underscores.',true);save({name:n});message('Username saved successfully.')};
+  $('resetPassword').onclick=()=>{const e=$('email').value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return message('Enter a valid email address first.',true);save({email:e});message('If that email belongs to an account, reset instructions will be sent shortly.')};
+  $('savePrivacy').onclick=()=>{save({privacy:{invites:$('invites').checked,online:$('online').checked}});message('Privacy settings saved.')};
+  $('claim').onclick=()=>{s=read();if(s.lastDailyClaim===day())return message('Your daily reward has already been claimed.',true);save({voidMoon:(s.voidMoon||0)+10,lastDailyClaim:day()});message('Daily reward claimed: +10 Void Moon.');render()};
+  $('convert').onclick=()=>{s=read();if((s.voidMoon||0)<2)return message('You need 2 Void Moon to make 1 Void Shard.',true);save({voidMoon:s.voidMoon-2,voidShards:(s.voidShards||0)+1});message('Conversion complete: +1 Void Shard.');render()}; render();
+})();
