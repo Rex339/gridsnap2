@@ -1,460 +1,372 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#090a12" />
-  <title>VoidVerse — Play beyond the horizon</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="manifest" href="manifest.webmanifest" />
-</head>
-<body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
+const STORAGE_KEY = 'voidverse-player-v1';
+const defaultState = {
+  name: 'Nova',
+  email: '',
+  tix: 150,
+  vv: 0,
+  published: false,
+  color: 'violet',
+  items: [],
+  emotes: [],
+  equippedItem: null,
+  equippedEmote: null,
+  quests: {
+    customize: true,
+    emote: true,
+    portal: true,
+    world: false
+  },
+  badges: [],
+  tutorialDone: false,
+  hiddenPortalOpen: false,
+  photoMode: false
+};
 
-  <section class="auth-gate" id="authGate">
-    <div class="auth-copy">
-      <div class="brand-lockup"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></div>
-      <p class="eyebrow">THE NEXT PLAYGROUND</p>
-      <h1>Build worlds.<br /><em>Find yours.</em></h1>
-      <p class="hero-copy">A living universe of games, creators, and impossible ideas.</p>
-      <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
-    </div>
+const itemCatalog = [
+  { id: 'nebula-hood', name: 'Nebula Hood', kind: 'Headwear', price: 8, icon: '◈', color: '#9b7cff', tint: 'violet' },
+  { id: 'orbit-aura', name: 'Orbit Aura', kind: 'Aura', price: 12, icon: '✦', color: '#75e9e0', tint: 'cyan' },
+  { id: 'void-wings', name: 'Void Wings', kind: 'Back item', price: 18, icon: '⌁', color: '#f47cd8', tint: 'pink' },
+  { id: 'pixel-crown', name: 'Pixel Crown', kind: 'Headwear', price: 25, icon: '♛', color: '#d8f67c', tint: 'lime' }
+];
 
-    <div class="auth-card glass-card">
-      <div class="auth-tabs">
-        <button class="tab active" data-auth="signin">Sign in</button>
-        <button class="tab" data-auth="signup">Create account</button>
-      </div>
+const emoteCatalog = [
+  { id: 'wave', name: 'Cosmic Wave', price: 4, icon: '👋' },
+  { id: 'spark', name: 'Sparkle', price: 6, icon: '✨' },
+  { id: 'dance', name: 'Zero-G Dance', price: 10, icon: '🕺' },
+  { id: 'laugh', name: 'Star Laugh', price: 7, icon: '😄' }
+];
 
-      <div class="auth-form" data-form="signin">
-        <p class="eyebrow">WELCOME BACK</p>
-        <h2>Return to the Verse</h2>
-        <label>Username or email<input id="signinName" type="text" placeholder="e.g. astral_player" /></label>
-        <label>Password<input id="signinPassword" type="password" placeholder="••••••••" /></label>
-        <button class="primary full" id="signinButton">Enter VoidVerse <span>↗</span></button>
-        <p class="form-note" id="signinNote">Demo mode — no account required.</p>
-      </div>
+const badgeCatalog = [
+  { id: 'first-login', name: 'First Steps', icon: '✧', text: 'Started the journey' },
+  { id: 'fashion-star', name: 'Fashion Star', icon: '☄', text: 'Equipped a new item' },
+  { id: 'emote-master', name: 'Emote Master', icon: '⚡', text: 'Unlocked a special emote' },
+  { id: 'portal-runner', name: 'Portal Runner', icon: '🌀', text: 'Opened the mystery portal' }
+];
 
-      <div class="auth-form hidden" data-form="signup">
-        <p class="eyebrow">START YOUR STORY</p>
-        <h2>Claim your constellation</h2>
-        <label>Choose a username<input id="signupName" type="text" placeholder="e.g. nova_builder" /></label>
-        <label>Email address<input id="signupEmail" type="email" placeholder="you@voidverse.space" /></label>
-        <label>Create password<input id="signupPassword" type="password" placeholder="••••••••" /></label>
-        <button class="primary full" id="signupButton">Create account <span>↗</span></button>
-        <p class="form-note" id="signupNote">Your new profile begins with 150 TIX.</p>
-      </div>
-    </div>
-  </section>
+let state = loadState();
 
-  <main class="app-shell hidden" id="appShell">
-    <header class="topbar">
-      <a class="brand-lockup" href="#top"><span class="brand-mark">✦</span><span>VOID<span>VERSE</span></span></a>
-      <nav class="desktop-nav">
-        <a class="nav-link active" href="#discover">Discover</a>
-        <a class="nav-link" href="#customize">Avatar</a>
-        <a class="nav-link" href="#quests">Quests</a>
-        <a class="nav-link" href="#studio">Studio</a>
-      </nav>
-      <div class="top-actions">
-        <div class="wallet-pill">
-          <span class="tix-dot">T</span><strong id="topTix">150</strong>
-          <span class="vv-dot">✦</span><strong id="topVv">0</strong>
+function loadState() {
+  try {
+    return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') };
+  } catch { return { ...defaultState }; }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  render();
+}
+
+function $(id) { return document.getElementById(id); }
+
+function setColor(color) {
+  state.color = color;
+  const root = document.getElementById('avatarPreview');
+  if (root) {
+    const palette = { violet: '#9b7cff', cyan: '#75e9e0', pink: '#f47cd8', lime: '#d8f67c' };
+    root.style.color = palette[color] || '#9b7cff';
+    const photo = document.getElementById('photoAvatar');
+    if (photo) photo.style.color = palette[color] || '#9b7cff';
+  }
+  saveState();
+}
+
+function openApp(name, email = '') {
+  state.name = name || 'Nova';
+  if (email) state.email = email;
+  state.tutorialDone = state.tutorialDone || false;
+  saveState();
+  $('authGate').classList.add('hidden');
+  $('appShell').classList.remove('hidden');
+  window.scrollTo(0, 0);
+  if (!state.tutorialDone) {
+    $('tutorialOverlay').classList.remove('hidden');
+  }
+}
+
+function closeTutorial() {
+  state.tutorialDone = true;
+  saveState();
+  $('tutorialOverlay').classList.add('hidden');
+}
+
+function toast(id, message) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = message;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => {
+    el.textContent = '';
+  }, 2600);
+}
+
+function buyItem(entry) {
+  if (state.vv < entry.price) {
+    toast('economyToast', `You need ${entry.price} VV Tokens for ${entry.name}.`);
+    return;
+  }
+  state.vv -= entry.price;
+  if (!state.items.includes(entry.id)) state.items.push(entry.id);
+  state.equippedItem = entry.id;
+  saveState();
+  toast('economyToast', `${entry.name} equipped.`);
+}
+
+function buyEmote(entry) {
+  if (state.vv < entry.price) {
+    toast('economyToast', `You need ${entry.price} VV Tokens for ${entry.name}.`);
+    return;
+  }
+  state.vv -= entry.price;
+  if (!state.emotes.includes(entry.id)) state.emotes.push(entry.id);
+  state.equippedEmote = entry.id;
+  saveState();
+  toast('economyToast', `${entry.name} ready.`);
+}
+
+function renderCatalog() {
+  const itemRoot = $('itemCatalog');
+  itemRoot.innerHTML = itemCatalog.map(item => {
+    const owned = state.items.includes(item.id);
+    const label = owned ? 'Owned' : `${item.price} VV`;
+    const action = owned ? 'Equip' : 'Buy';
+    return `
+      <div class="catalog-item">
+        <div class="catalog-icon" style="color:${item.color}; background:${item.color}22;">${item.icon}</div>
+        <div>
+          <h4>${item.name}</h4>
+          <small>${item.kind}</small>
         </div>
-        <button class="secondary tiny" id="logOutButton">Log out</button>
+        <button class="catalog-buy ${owned ? 'owned' : 'buy'}" data-type="item" data-id="${item.id}">${owned ? action : label}</button>
       </div>
-    </header>
+    `;
+  }).join('');
 
-    <section class="welcome" id="top">
+  const emoteRoot = $('emoteCatalog');
+  emoteRoot.innerHTML = emoteCatalog.map(item => {
+    const owned = state.emotes.includes(item.id);
+    const label = owned ? 'Use' : `${item.price} VV`;
+    return `
+      <div class="catalog-item">
+        <div class="catalog-icon">${item.icon}</div>
+        <div>
+          <h4>${item.name}</h4>
+          <small>Emote</small>
+        </div>
+        <button class="catalog-buy ${owned ? 'owned' : 'buy'}" data-type="emote" data-id="${item.id}">${owned ? 'Use' : label}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBadges() {
+  const badgeRoot = $('badgeList');
+  const earned = new Set(state.badges || []);
+  badgeRoot.innerHTML = badgeCatalog.map(badge => {
+    const unlocked = earned.has(badge.id);
+    return `
+      <div class="badge-item">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="badge-pill">${badge.icon}</div>
+          <div>
+            <strong>${badge.name}</strong><br />
+            <small>${badge.text}</small>
+          </div>
+        </div>
+        <span class="tag ${unlocked ? 'violet' : ''}">${unlocked ? 'Unlocked' : 'Hidden'}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderQuests() {
+  const questRoot = $('questList');
+  const quests = [
+    { id: 'customize', title: 'Customize your avatar', reward: '+10 TIX', complete: state.items.length > 0 || state.color },
+    { id: 'emote', title: 'Unlock an emote', reward: '+15 TIX', complete: state.emotes.length > 0 },
+    { id: 'portal', title: 'Open the mystery portal', reward: '+25 TIX', complete: state.hiddenPortalOpen },
+    { id: 'world', title: 'Visit the featured world', reward: '+20 TIX', complete: state.published }
+  ];
+
+  questRoot.innerHTML = quests.map(quest => `
+    <div class="quest-item">
       <div>
-        <p class="eyebrow" id="dateLabel">THURSDAY, SEPTEMBER 24</p>
-        <h1>Good evening, <span id="playerName">Nova</span>.</h1>
-        <p class="subtle">The Verse is waiting for your next moment of wonder.</p>
+        <strong>${quest.title}</strong><br />
+        <small>${quest.reward}</small>
       </div>
-      <div class="welcome-actions">
-        <button class="primary" id="playPortalButton">Enter Portal</button>
-        <button class="ghost" id="photoModeButton">Photo mode</button>
-      </div>
-    </section>
-
-    <section class="featured glass-card" id="discover">
-      <div class="featured-art">
-        <div class="planet planet-one"></div>
-        <div class="planet planet-two"></div>
-        <div class="featured-star">✦</div>
-        <span class="floating-label label-one">NEW REALMS</span>
-        <span class="floating-label label-two">12K PLAYING</span>
-      </div>
-      <div class="featured-content">
-        <div class="tag-row">
-          <span class="tag violet">FEATURED</span>
-          <span class="tag">12K PLAYING</span>
-        </div>
-        <h2>Neon Drift:<br /><em>Afterlight</em></h2>
-        <p>Race through endless light trails, dodge gravity ripples, and outpace rival creators in the galaxy’s loudest arena.</p>
-        <button class="primary" type="button">Join world</button>
-      </div>
-    </section>
-
-    <section class="section-block worlds-section">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">CURATED FOR YOU</p>
-          <h2>Explore worlds</h2>
-        </div>
-        <button class="text-button" type="button">View all <span>→</span></button>
-      </div>
-
-      <div class="world-grid">
-        <article class="world-card glass-card">
-          <div class="world-thumb thumb-one"></div>
-          <div class="world-copy">
-            <h3>Galaxy Garden</h3>
-            <p>Grow impossible flowers and decorate floating islands.</p>
-          </div>
-        </article>
-        <article class="world-card glass-card">
-          <div class="world-thumb thumb-two"></div>
-          <div class="world-copy">
-            <h3>Skyline Rush</h3>
-            <p>Boost through neon rails and push your speedrun score.</p>
-          </div>
-        </article>
-        <article class="world-card glass-card">
-          <div class="world-thumb thumb-three"></div>
-          <div class="world-copy">
-            <h3>Stone Drift</h3>
-            <p>Build a floating home and meet up with friends at sunset.</p>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section class="economy-panel glass-card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">YOUR ECONOMY</p>
-          <h2>Vault</h2>
-        </div>
-        <span class="live-status"><i></i> LIVE</span>
-      </div>
-      <div class="economy-grid">
-        <div class="currency-box">
-          <span class="eyebrow">TIX</span>
-          <strong id="tixBalance">150</strong>
-          <small>Starter currency</small>
-        </div>
-        <div class="currency-box highlight">
-          <span class="eyebrow">VV Tokens</span>
-          <strong id="vvBalance">0</strong>
-          <small>Cosmic premium economy</small>
-        </div>
-        <div class="currency-box action-box">
-          <span class="eyebrow">EXCHANGE</span>
-          <button class="primary" id="exchangeButton">Trade 50 TIX → 10 VV</button>
-          <small id="economyToast"></small>
-        </div>
-      </div>
-    </section>
-
-    <section class="customizer-section glass-card" id="customize">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">IDENTITY LAB</p>
-          <h2>Make it yours</h2>
-        </div>
-        <span class="section-count">01 / 03</span>
-      </div>
-
-      <div class="customizer-grid">
-        <div class="avatar-stage">
-          <div class="avatar-shell">
-            <div class="avatar-shadow"></div>
-            <div id="avatarPreview" class="avatar-preview"> </div>
-          </div>
-          <div class="avatar-controls">
-            <button class="chip active" data-color="violet">Violet</button>
-            <button class="chip" data-color="cyan">Cyan</button>
-            <button class="chip" data-color="pink">Pink</button>
-            <button class="chip" data-color="lime">Lime</button>
-          </div>
-        </div>
-
-        <div class="catalog-panel">
-          <div class="catalog-header">
-            <h3>Items</h3>
-            <span class="tag violet" id="catalogNote">Starter kit</span>
-          </div>
-          <div id="itemCatalog" class="catalog-list"></div>
-          <h3 class="emote-title">Emotes</h3>
-          <div id="emoteCatalog" class="catalog-list"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="quest-panel glass-card" id="quests">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">STORYLINE</p>
-          <h2>Daily quests</h2>
-        </div>
-        <span class="tag violet">3 active</span>
-      </div>
-      <div id="questList" class="quest-list"></div>
-    </section>
-
-    <section class="badges-panel glass-card" id="badges">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">COLLECTION</p>
-          <h2>Badges</h2>
-        </div>
-      </div>
-      <div id="badgeList" class="badge-list"></div>
-    </section>
-
-    <section class="portal-panel glass-card" id="studio">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">MYSTERY PORTAL</p>
-          <h2>Portal of whispers</h2>
-        </div>
-        <span class="tag violet">Secret room</span>
-      </div>
-      <div class="portal-content">
-        <div class="portal-visual">
-          <div class="portal-core">✦</div>
-        </div>
-        <div class="portal-copy">
-          <p class="subtle">Explore the hidden portal to find rare rewards and world secrets.</p>
-          <button class="primary" id="portalSecretButton">Open the portal</button>
-          <p id="portalStatus" class="portal-status">Nothing here yet…</p>
-        </div>
-      </div>
-    </section>
-
-    <footer>
-      <span>✦ VOIDVERSE</span>
-      <span>Made for the curious.</span>
-      <span>v0.9.6</span>
-    </footer>
-  </main>
-
-  <div id="tutorialOverlay" class="tutorial-overlay hidden">
-    <div class="tutorial-card glass-card">
-      <p class="eyebrow">STARTER GUIDE</p>
-      <h3>Welcome to your first run.</h3>
-      <ol>
-        <li>Customize your avatar.</li>
-        <li>Collect a free emote.</li>
-        <li>Complete 3 daily quests.</li>
-        <li>Open the mystery portal.</li>
-      </ol>
-      <button class="primary" id="closeTutorialButton">Start exploring</button>
+      <button class="primary quest-button" data-quest="${quest.id}" ${quest.complete ? 'disabled' : ''}>${quest.complete ? 'Done' : 'Claim'}</button>
     </div>
-  </div>
-
-  <div id="photoOverlay" class="photo-overlay hidden">
-    <div class="photo-card glass-card">
-      <div class="photo-header">
-        <h3>Photo mode</h3>
-        <button class="ghost" id="closePhotoButton">Close</button>
-      </div>
-      <div class="photo-preview">
-        <div id="photoAvatar" class="avatar-preview large"> </div>
-      </div>
-      <p id="photoCaption">VoidVerse moment captured.</p>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\n"},{
+  `).join('');
+}
+
+function claimQuest(id) {
+  if (id === 'customize' && state.items.length === 0) return;
+  if (id === 'emote' && state.emotes.length === 0) return;
+  if (id === 'portal' && !state.hiddenPortalOpen) return;
+  if (id === 'world' && !state.published) return;
+
+  const rewardMap = { customize: 10, emote: 15, portal: 25, world: 20 };
+  state.tix += rewardMap[id] || 0;
+  if (!state.badges.includes('first-login') && state.tix >= 150) state.badges.push('first-login');
+  if (state.items.length > 0 && !state.badges.includes('fashion-star')) state.badges.push('fashion-star');
+  if (state.emotes.length > 0 && !state.badges.includes('emote-master')) state.badges.push('emote-master');
+  if (state.hiddenPortalOpen && !state.badges.includes('portal-runner')) state.badges.push('portal-runner');
+  saveState();
+}
+
+function renderAvatar() {
+  const avatar = $('avatarPreview');
+  const photo = $('photoAvatar');
+  const palette = { violet: '#9b7cff', cyan: '#75e9e0', pink: '#f47cd8', lime: '#d8f67c' };
+  const color = palette[state.color] || '#9b7cff';
+  if (avatar) avatar.style.color = color;
+  if (photo) photo.style.color = color;
+}
+
+function render() {
+  const tix = state.tix || 0;
+  const vv = state.vv || 0;
+  if ($('topTix')) $('topTix').textContent = tix;
+  if ($('topVv')) $('topVv').textContent = vv;
+  if ($('tixBalance')) $('tixBalance').textContent = tix;
+  if ($('vvBalance')) $('vvBalance').textContent = vv;
+  if ($('playerName')) $('playerName').textContent = state.name || 'Nova';
+  renderAvatar();
+  renderCatalog();
+  renderQuests();
+  renderBadges();
+}
+
+function bindUI() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el === tab));
+      const mode = tab.dataset.auth;
+      document.querySelectorAll('.auth-form').forEach(form => {
+        const show = form.dataset.form === mode;
+        form.classList.toggle('hidden', !show);
+      });
+    });
+  });
+
+  $('signinButton').addEventListener('click', () => {
+    const name = $('signinName').value.trim();
+    const entered = name || 'Nova';
+    openApp(entered);
+  });
+
+  $('signupButton').addEventListener('click', () => {
+    const name = $('signupName').value.trim();
+    if (!name) {
+      $('signupNote').textContent = 'Choose a username before entering the Verse.';
+      $('signupNote').classList.add('error');
+      return;
+    }
+    $('signupNote').classList.remove('error');
+    openApp(name, $('signupEmail').value.trim());
+  });
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
+      setColor(chip.dataset.color);
+    });
+  });
+
+  $('exchangeButton').addEventListener('click', () => {
+    if (state.tix < 50) {
+      toast('economyToast', 'You need 50 TIX to make this exchange.');
+      return;
+    }
+    state.tix -= 50;
+    state.vv += 10;
+    saveState();
+    toast('economyToast', 'Exchange complete: −50 TIX, +10 VV.');
+  });
+
+  $('playPortalButton').addEventListener('click', () => {
+    state.tix += 15;
+    state.hiddenPortalOpen = true;
+    state.published = true;
+    if (!state.badges.includes('portal-runner')) state.badges.push('portal-runner');
+    $('portalStatus').textContent = 'A secret portal opens and reveals a hidden shimmer trail. +15 TIX unlocked!';
+    saveState();
+  });
+
+  $('portalSecretButton').addEventListener('click', () => {
+    state.hiddenPortalOpen = true;
+    state.tix += 25;
+    state.vv += 5;
+    if (!state.badges.includes('portal-runner')) state.badges.push('portal-runner');
+    $('portalStatus').textContent = 'You found the hidden portal. The stars reward you with +25 TIX and +5 VV.';
+    saveState();
+  });
+
+  $('logOutButton').addEventListener('click', () => {
+    $('appShell').classList.add('hidden');
+    $('authGate').classList.remove('hidden');
+    $('signinName').value = '';
+    $('signinPassword').value = '';
+    $('signupName').value = '';
+    $('signupEmail').value = '';
+    $('signupPassword').value = '';
+  });
+
+  $('closeTutorialButton').addEventListener('click', closeTutorial);
+
+  $('photoModeButton').addEventListener('click', () => {
+    const photo = $('photoOverlay');
+    photo.classList.remove('hidden');
+    $('photoCaption').textContent = `${state.name}'s VoidVerse snapshot — ${state.color} palette active.`;
+  });
+
+  $('closePhotoButton').addEventListener('click', () => {
+    $('photoOverlay').classList.add('hidden');
+  });
+
+  document.body.addEventListener('click', (event) => {
+    const itemButton = event.target.closest('[data-type="item"]');
+    if (itemButton) {
+      const item = itemCatalog.find(entry => entry.id === itemButton.dataset.id);
+      if (!state.items.includes(item.id)) buyItem(item);
+      else {
+        state.equippedItem = item.id;
+        saveState();
+        toast('economyToast', `${item.name} equipped.`);
+      }
+    }
+
+    const emoteButton = event.target.closest('[data-type="emote"]');
+    if (emoteButton) {
+      const emote = emoteCatalog.find(entry => entry.id === emoteButton.dataset.id);
+      if (!state.emotes.includes(emote.id)) buyEmote(emote);
+      else {
+        state.equippedEmote = emote.id;
+        saveState();
+        toast('economyToast', `${emote.name} ready to use.`);
+      }
+    }
+
+    const questButton = event.target.closest('[data-quest]');
+    if (questButton) {
+      claimQuest(questButton.dataset.quest);
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  bindUI();
+  render();
+  const palette = { violet: '#9b7cff', cyan: '#75e9e0', pink: '#f47cd8', lime: '#d8f67c' };
+  const color = palette[state.color] || '#9b7cff';
+  const avatar = $('avatarPreview');
+  if (avatar) avatar.style.color = color;
+  const photo = $('photoAvatar');
+  if (photo) photo.style.color = color;
+  if (!state.tutorialDone) $('tutorialOverlay').classList.remove('hidden');
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
